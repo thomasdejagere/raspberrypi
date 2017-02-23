@@ -1,3 +1,4 @@
+//this is a test to check if the cron job works!
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
