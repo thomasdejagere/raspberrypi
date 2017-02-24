@@ -1,4 +1,3 @@
-//dit is een resilio testea
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -6,15 +5,20 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
+//var morgan      = require('morgan');
+var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 
 mongoose.Promise = global.Promise;
 
 mongoose.connect('mongodb://localhost/todo-api')
 	.then(() => console.log('connection to mongodb is succesful'))
 	.catch((err) => console.log(err));
+app.set('superSecret', 'thisIsASuperSecret');
+
 
 var index = require('./routes/index');
 var todos = require('./routes/todos');
+var user = require('./routes/user');
 
 var app = express();
 
@@ -30,8 +34,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+
 app.use('/', index);
 app.use('/todos', todos);
+app.use('/user', user);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
