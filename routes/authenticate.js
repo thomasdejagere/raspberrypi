@@ -4,6 +4,7 @@ var User = require('../models/User.js');
 var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 var config = require('../config');
 var mongoose = require('mongoose');
+var auth = require('../middlewares/auth');
 
 router.post('/', function (req, res, next) {
   User.findOne({
