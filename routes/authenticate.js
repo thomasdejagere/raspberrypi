@@ -21,8 +21,8 @@ router.post('/', function (req, res, next) {
       } else {
         //user is found and password is correct
         //create a token
-        var token = jwt.sign(user , config.secret, {
-          expiresInMinutes: 1440
+        var token = jwt.sign(user, config.secret, {
+          expiresIn: 1440 // expires in 24 hours
         });
 
         //return the information
