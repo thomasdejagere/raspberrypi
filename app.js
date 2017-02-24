@@ -7,6 +7,7 @@ var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
 //var morgan      = require('morgan');
 var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
+var config = require('./config');
 
 mongoose.Promise = global.Promise;
 
@@ -18,7 +19,7 @@ mongoose.connect('mongodb://localhost/todo-api')
 
 var index = require('./routes/index');
 var todos = require('./routes/todos');
-var user = require('./routes/user');
+var user = require('./routes/users');
 
 var app = express();
 
@@ -27,7 +28,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
 
-app.set('superSecret', 'thisIsASuperSecret');
+app.set('superSecret', config.secret);
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
@@ -39,7 +40,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
 app.use('/todos', todos);
-app.use('/user', user);
+app.use('/users', user);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
