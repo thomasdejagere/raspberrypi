@@ -13,7 +13,7 @@ mongoose.Promise = global.Promise;
 mongoose.connect('mongodb://localhost/todo-api')
 	.then(() => console.log('connection to mongodb is succesful'))
 	.catch((err) => console.log(err));
-app.set('superSecret', 'thisIsASuperSecret');
+
 
 
 var index = require('./routes/index');
@@ -26,6 +26,8 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
+
+app.set('superSecret', 'thisIsASuperSecret');
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(logger('dev'));
