@@ -18,7 +18,6 @@ mongoose.connect('mongodb://localhost/todo-api')
 
 
 var index = require('./routes/index');
-var todos = require('./routes/todos');
 var user = require('./routes/users');
 var authenticate = require('./routes/authenticate');
 
