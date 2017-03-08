@@ -11,7 +11,7 @@ var config = require('./config');
 
 mongoose.Promise = global.Promise;
 
-mongoose.connect('mongodb://localhost/todo-api')
+mongoose.connect('mongodb://localhost/crm-pwnc')
 	.then(() => console.log('connection to mongodb is succesful'))
 	.catch((err) => console.log(err));
 
@@ -26,7 +26,6 @@ var app = express();
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-
 
 app.set('superSecret', config.secret);
 // uncomment after placing your favicon in /public
