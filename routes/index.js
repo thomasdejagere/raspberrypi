@@ -3,6 +3,8 @@ var router = express.Router();
 
 router.use('/users', require('./users'));
 router.use('/authenticate', require('./authenticate'));
+router.use('/articles', require('./articles'));
+router.use('/customers', require('./customers'));
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
