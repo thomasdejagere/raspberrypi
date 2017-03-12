@@ -1,19 +1,19 @@
 var mongoose = require('mongoose');
 
 var CustomerSchema = new mongoose.Schema({
-  firstName: String,
-  lastName: String,
-  address: String,
-  postcode: Number,
-  email: String,
-  createdOn: Date,
-  extraInfo: [{key: String, value: mongoose.Schema.Types.Mixed}],
+  firstName: {type: String, required: true},
+  lastName: {type: String, required: false},
+  address: {type: String, required: false},
+  postcode: {type: Number, required: false},
+  email: {type: String, required: true},
+  createdOn: { type: Date, default: Date.now },
+  extraInfo: [{ key: String, value: String }],
   purchases: [{
-    purchaseDate: Date,
-    articles: [{type: mongoose.Schema.ObjectId, ref: 'Article'}]
+    purchaseDate: { type: Date, default: Date.now },
+    articles: []
   }]
 });
-
+//articles: [{ type: mongoose.Schema.ObjectId, ref: 'Article' }]
 
 CustomerSchema.statics.doesCustomerExist = function(firstName, lastName, email, callback) {
   this.find({firstName, lastName, email}, function (err, customers) {

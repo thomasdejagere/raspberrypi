@@ -4,6 +4,8 @@ var mongoose = require('mongoose');
 var Customer = require('../models/Customer.js');
 var Article = require('../models/Article.js');
 var validator = require('validator');
+var Promise = require('bluebird');
+var util = require('util');
 
 /* GET /customers listing. */
 router.get('/', function(req, res, next) {
@@ -17,8 +19,6 @@ router.get('/', function(req, res, next) {
 router.post('/', function (req, res, next) {
   let customer = req.body;
 
-  console.log("customer");
-  console.log(customer);
   //controleer of de purchase array undefined is. Zoja maken we hier een lege array van.
   if (typeof customer.purchases === "undefined") {
     customer.purchases = [];
@@ -43,42 +43,59 @@ router.post('/', function (req, res, next) {
 
   //puchase zal een datum hebben en een array van article objecten, alleen de Id's moeten worden opgeslaan
   //TODO: what to do when there's a discount?
-  let purchases = [];
+  let purchases = null;
   if (customer.purchases && customer.purchases.length > 0) {
-    customer.purchases.forEach((purchase) => {
+    purchases = customer.purchases.map((purchase) => {
+      let promises = null;
       if(purchase && purchase.articles && purchase.articles.length > 0) {
-        Article.addNewArticlesAndReturnIds(purchase.articles, function (err, articleIds) {
-            //callback
+        Article.addNewArticlesAndReturnIds(purchase.articles, function (result) {
+            promises = result;
         });
+      }
+
+      return {
+        promises,
+        purchaseDate: purchase.purchaseDate
       }
     });
   }
-  /*
-  console.log("purchases");
-  console.log(purchases);
-  //UPDATE customer purchases
-  customer.purchases = purchases;
 
-  //controleren of er al een customer bestaat met dezelfde firstName + lastName + email
-  Customer.doesCustomerExist(customer.firstName, customer.lastName, customer.email, function (err, customer) {
-    if (err) return next(err);
-    if (customer.result) {
-      //customer exists
-      customer.save(function (err) {
-        if (err) next (err);
-        res.json({message: 'The customer was succesfully updated'});
+  let result = [];
+
+  var allPromise = Promise.all(
+    purchases.map((purchase) => {
+        return Promise.all(purchase.promises);
+    })
+  );
+
+  allPromise.then(function (purchases) {
+    let resultingPurchases = purchases.map((purchase) => {
+      const articleIds = purchase.map((article) => {
+        return article.result._id;
       });
-    } else {
-      //customer doesn't exist
-      //update the created on
-      customer.createdOn = Date.now();
-      Customer.create(customer, function (err, response) {
-        if (err) return next(err);
-        res.json(response);
-      })
-    }
+
+      return {
+          articles: articleIds
+      };
+    });
+
+    Customer.doesCustomerExist(customer.firstName, customer.lastName, customer.email, function (err, response) {
+      if (err) return next(err);
+
+      customer.purchases = resultingPurchases;
+
+      if (response.result) {
+        //customer exists
+
+      } else {
+        //customer doesn't exist
+        Customer.create(customer, function (err, response) {
+          if (err) return next(err);
+          res.json(response);
+        })
+      }
+    });
   });
-  */
 });
 
 /* GET /customers/:customerId listing. */
