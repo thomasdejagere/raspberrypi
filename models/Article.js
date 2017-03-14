@@ -27,4 +27,16 @@ ArticleSchema.statics.addNewArticlesAndReturnIds = function(articles, callback) 
   callback(promises);
 }
 
+ArticleSchema.statics.getArticlesFromIds = function(articleIds, callback) {
+  let result = [];
+
+  let ids = articleIds.map((id) => {
+    return mongoose.Types.ObjectId(id);
+  });
+
+  return this.find({
+    '_id': { $in: articleIds}}
+  ).exec();
+}
+
 module.exports = mongoose.model('Article', ArticleSchema);
