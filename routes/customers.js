@@ -21,12 +21,33 @@ router.get('/', function(req, res, next) {
 
 /* POST /customers listing. */
 /*
-Description: TODO
+Description: Saves a customer with all its properties
 To consider:
   - What do we return from this method? Now: we return the Id of the new customer
+  - What to do with discounts or other prices?
+  - What to do with multiple articles bought?
+
 TODO:
   - Input validation
   - Required field validation
+  - Store articles like this:
+  "articles": [
+				{
+					"ObjectId": qsmldfqslmfdkdlmfjlqsm
+					"payedPricePerUnit": 120,
+					"amount": 1
+				},
+				{
+					ObjectId": qsmldfqslmfdkdlmfjlqsm,
+					"payedPricePerUnit": 200,
+					"amount": 1
+				},
+				{
+					ObjectId": qsmldfqslmfdkdlmfjlqsm,
+					"payedPricePerUnit": 100,
+					"amount": 2
+				}
+			]
 */
 router.post('/', function (req, res, next) {
   let customer = req.body;
@@ -82,12 +103,13 @@ router.post('/', function (req, res, next) {
 
   allPromise.then(function (purchases) {
     let resultingPurchases = purchases.map((purchase) => {
-      const articleIds = purchase.map((article) => {
-        return article.result._id;
+      const resultingArticles = purchase.map((article) => {
+        article.extraInfo._id = article.result._id;
+        return article.extraInfo;
       });
 
       return {
-          articles: articleIds
+          articles: resultingArticles
       };
     });
 
@@ -117,11 +139,30 @@ router.post('/', function (req, res, next) {
 Description: Call that returns a single customer based on the given customerId url parameter. The call returns the full customer object with the purchases and the bought articles.
 */
 router.get('/:customerId', function (req, res, next) {
-  //TODO: Return the articles, not the id's
   Customer.findById(req.params.customerId, function (err, customer){
     if (err) return next(err);
+
     getPurchases(customer.purchases, function (purchases) {
-      customer.purchases = purchases;
+      let purchasesWithExtraInfo = [];
+      purchases.forEach((purchase) => {
+        const purchaseWithExtraInfo = customer.purchases.find((p) => {
+          return p.purchaseDate === purchase.purchaseDate;
+        });
+
+        let resultingArticles = purchase.articles.map((article) => {
+          let articleObj = article.toObject();
+
+          const articleWithExtraInfo = purchaseWithExtraInfo.articles.find((a) => {
+            return String(a._id) === String(article._id);
+          });
+
+          let result = Object.assign({}, articleWithExtraInfo, articleObj);
+          return result;
+        });
+        purchase.articles = resultingArticles;
+        purchasesWithExtraInfo.push(purchase);
+      });
+      customer.purchases = purchasesWithExtraInfo;
       res.json(customer);
     });
   });
@@ -131,16 +172,62 @@ router.get('/:customerId', function (req, res, next) {
 /*
 Description: TODO
 TODO: Update the purchases with their articles.
+    : => Articles where added to the purchases => create the articles
+      => Articles where left out of the purchases => delete the article from the purchase but not the article itself
+      => Articles can be updated in the purchase => create a new article and update the articleId
+      => Purchase info per article is updated => Update the info
+      => Purchase was added to the customer (most common use case) => add the articles and store the purchase
+      => Purchase was deleted from the customer => Delete the purchase
+      => Purchase information was updated (e.g. the purchaseDate) => update the information
 */
 router.put('/:customerId', function (req, res, next) {
   //TODO: refacter => findByIdAndUpdate http://mongoosejs.com/docs/api.html#model_Model.findByIdAndUpdate
   Customer.findById(req.params.customerId, function (err, customer) {
     if (err) return next(err);
+    //get all the purchases that have an id
+    //initialize an "resultingPurchases" array
+    //loop over the purchases and check if their purchaseDate is updated
+        //If so: update the purchaseDate
+      //Get all the articles from the dbpurchase
+      //make a copy of the articles and store them in the array "oldArticles";
+      //loop over the articles
+        //do a find function on the oldArticles to check if their are articles who have the same primary keys (name, ref)
+          //if an article was found
+            //check if the other properties aren't changed from the original
+              //add the article to the list "updateArticle"; and delete them from the newArticles array and oldArticles array
+            //check if the extrainfo properties aren't changed from the original
+              //add the article to the list "updateExtraInfo"; and delete them from the newArticles array and oldArticles array
+            //if the normal properties and the extra properties changed add them to the list "updateAll"; and delete them from the newArticles array and oldArticles array
 
-    updateCustomer(customer, req.body, function (err, response) {
-      if (err) return next(err);
-      res.json(response);
-    })
+            //if all the properties are the same
+              //Remove the articles that are known from the db from the array so that only the new articles are left on the array; and delete them from the newArticles array and oldArticles array
+          //if the article wasn't found
+            //if there are articles left on the newArticles array, add them to the list "newArticles";
+       //if an there are oldArticles still in the array, add them to the "deleteArticleFromPurchase";
+
+      //Result of the article loop are lists of new(newArticles)/updated(updateArticle, updateExtraInfo)/deleted(deleteArticleFromPurchase)/all(updateAll) articles. The articles have the extraInfo and normal properties.
+      //declare a variable "resultingArticles"
+      //loop over the "newArticles" array
+        //do a Article.create and retreive the ObjectId
+        //add the ObjectId with the extraInfo properties to an object and add the object to the "resultingArticles" array;
+      //loop over the "updateArticle" array
+        //do a Article.findByIdAndUpdate, pass the normal properties (not the extra ones) and retreive the ObjectId
+        //add the ObjectId with the extraInfo properties to an object and add the object to the "resultingArticles" array;
+      //loop over the "updateExtraInfo" array
+        //Get the article.ObjectId from the article (is in object, no call needed) and get the extraInfo objects, put them in an object and store the object in the "resultingArticles" array
+      //loop over the "updateAll" array
+        //do a Article.findByIdAndUpdate, pass the normal properties (not the extra ones) and retreive the ObjectId;
+        //Put the ObjectId, with the extraInfo properties, put them in an object and store the object in the "resultingArticles" array;
+      //loop over the "deleteArticleFromPurchase" array
+        //Do nothing, if you don't add the articles to the "resultingArticles" array they won't be saved onto the updated customer;
+
+      //put the resultingArticles in the articles property of the purchase object;
+      //push the updatedPurchase to the resultingPurchases array
+    //end loop purchases
+
+    //add the resultingPurchases to the purchases property of the customer
+    //perform the customer.findByIdAndUpdate and pass the updated customer object;
+
   });
 });
 
@@ -155,9 +242,6 @@ router.delete('/:customerId', function (req, res, next) {
   });
 });
 
-/*
-Description: TODO
-*/
 const getPurchases = function (purchases, callback) {
   let allArticles = purchases.map((purchase) => {
     return {
@@ -178,21 +262,4 @@ const getPurchases = function (purchases, callback) {
       callback(purchases);
     });
 }
-
-
-const updateCustomer = function (customer, body, callback) {
-  customer.firstName = req.body.firstName;
-  customer.lastName = req.body.lastName;
-  customer.address = req.body.address;
-  customer.postcode = req.body.postcode;
-  customer.email = req.body.email;
-  customer.createdOn = req.body.email;
-  customer.extraInfo = req.body.extraInfo;
-  customer.purchases = req.body.purchases;
-
-  customer.save(function (err) {
-    callback(err, {message: 'The customer was succesfully updated'})
-  });
-}
-
 module.exports = router;
