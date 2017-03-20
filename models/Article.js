@@ -16,7 +16,7 @@ var ArticleSchema = new mongoose.Schema({
   description: String
 });
 
-ArticleSchema.statics.addNewArticlesAndReturnIds = function(articles, callback) {
+ArticleSchema.statics.upsertArticle = function(articles, callback) {
   let articleIds = [];
 
   let promises = articles.map((article) => {
@@ -61,11 +61,9 @@ ArticleSchema.statics.findOrCreate = function findOrCreate(query, data, options)
       )
 
       // Find document
-      this.findOne(query)
+      this.findOne({_id: query})
         .then(result => {
           // If document exist
-
-
           if (result) {
             if (options && options.upsert) {
               /**
@@ -78,10 +76,8 @@ ArticleSchema.statics.findOrCreate = function findOrCreate(query, data, options)
             }
             // Return document
             resolve({ result, extraInfo, created: false });
+
             return null;
-          } else if (options && !options.create) {
-            // If create is false, return null
-            resolve({ result: null, extraInfo, created: false });
           } else {
             // Create document
             resolve(

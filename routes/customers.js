@@ -30,24 +30,6 @@ To consider:
 TODO:
   - Input validation
   - Required field validation
-  - Store articles like this:
-  "articles": [
-				{
-					"ObjectId": qsmldfqslmfdkdlmfjlqsm
-					"payedPricePerUnit": 120,
-					"amount": 1
-				},
-				{
-					ObjectId": qsmldfqslmfdkdlmfjlqsm,
-					"payedPricePerUnit": 200,
-					"amount": 1
-				},
-				{
-					ObjectId": qsmldfqslmfdkdlmfjlqsm,
-					"payedPricePerUnit": 100,
-					"amount": 2
-				}
-			]
 */
 router.post('/', function (req, res, next) {
   let customer = req.body;
@@ -81,7 +63,7 @@ router.post('/', function (req, res, next) {
     purchases = customer.purchases.map((purchase) => {
       let promises = null;
       if(purchase && purchase.articles && purchase.articles.length > 0) {
-        Article.addNewArticlesAndReturnIds(purchase.articles, function (result) {
+        Article.upsertArticle(purchase.articles, function (result) {
             promises = result;
         });
       }
@@ -170,7 +152,8 @@ router.get('/:customerId', function (req, res, next) {
 
 /* PUT /customers/:customerId listing. */
 /*
-Description: TODO
+Description: If the user wants to update the customer this endpoint will be called => HE CAN'T UPDATE THE ARTICLES!!!
+
 TODO: Update the purchases with their articles.
     : => Articles where added to the purchases => create the articles
       => Articles where left out of the purchases => delete the article from the purchase but not the article itself
@@ -184,49 +167,7 @@ router.put('/:customerId', function (req, res, next) {
   //TODO: refacter => findByIdAndUpdate http://mongoosejs.com/docs/api.html#model_Model.findByIdAndUpdate
   Customer.findById(req.params.customerId, function (err, customer) {
     if (err) return next(err);
-    //get all the purchases that have an id
-    //initialize an "resultingPurchases" array
-    //loop over the purchases and check if their purchaseDate is updated
-        //If so: update the purchaseDate
-      //Get all the articles from the dbpurchase
-      //make a copy of the articles and store them in the array "oldArticles";
-      //loop over the articles
-        //do a find function on the oldArticles to check if their are articles who have the same primary keys (name, ref)
-          //if an article was found
-            //check if the other properties aren't changed from the original
-              //add the article to the list "updateArticle"; and delete them from the newArticles array and oldArticles array
-            //check if the extrainfo properties aren't changed from the original
-              //add the article to the list "updateExtraInfo"; and delete them from the newArticles array and oldArticles array
-            //if the normal properties and the extra properties changed add them to the list "updateAll"; and delete them from the newArticles array and oldArticles array
 
-            //if all the properties are the same
-              //Remove the articles that are known from the db from the array so that only the new articles are left on the array; and delete them from the newArticles array and oldArticles array
-          //if the article wasn't found
-            //if there are articles left on the newArticles array, add them to the list "newArticles";
-       //if an there are oldArticles still in the array, add them to the "deleteArticleFromPurchase";
-
-      //Result of the article loop are lists of new(newArticles)/updated(updateArticle, updateExtraInfo)/deleted(deleteArticleFromPurchase)/all(updateAll) articles. The articles have the extraInfo and normal properties.
-      //declare a variable "resultingArticles"
-      //loop over the "newArticles" array
-        //do a Article.create and retreive the ObjectId
-        //add the ObjectId with the extraInfo properties to an object and add the object to the "resultingArticles" array;
-      //loop over the "updateArticle" array
-        //do a Article.findByIdAndUpdate, pass the normal properties (not the extra ones) and retreive the ObjectId
-        //add the ObjectId with the extraInfo properties to an object and add the object to the "resultingArticles" array;
-      //loop over the "updateExtraInfo" array
-        //Get the article.ObjectId from the article (is in object, no call needed) and get the extraInfo objects, put them in an object and store the object in the "resultingArticles" array
-      //loop over the "updateAll" array
-        //do a Article.findByIdAndUpdate, pass the normal properties (not the extra ones) and retreive the ObjectId;
-        //Put the ObjectId, with the extraInfo properties, put them in an object and store the object in the "resultingArticles" array;
-      //loop over the "deleteArticleFromPurchase" array
-        //Do nothing, if you don't add the articles to the "resultingArticles" array they won't be saved onto the updated customer;
-
-      //put the resultingArticles in the articles property of the purchase object;
-      //push the updatedPurchase to the resultingPurchases array
-    //end loop purchases
-
-    //add the resultingPurchases to the purchases property of the customer
-    //perform the customer.findByIdAndUpdate and pass the updated customer object;
 
   });
 });
@@ -241,6 +182,170 @@ router.delete('/:customerId', function (req, res, next) {
     res.json({message: 'The customer is successfully deleted!'});
   });
 });
+
+/* GET /customers/:customerId/purchases */
+router.get('/:customerId/purchases', function (req, res, next) {
+  //TODO
+});
+
+/* POST /customer/:customerId/purchases */
+/*
+UPDATES THE LIST OF PURCHASES FOR A CUSTOMER
+*/
+router.post('/:customerId/purchases', function (req, res, next) {
+  Customer.findById(req.params.customerId, function (err, customer) {
+    const purchases = req.body;
+
+    //COPY FROM THE POST METHOD
+    let allPurchases = null;
+    if (purchases && purchases.length > 0) {
+      allPurchases = purchases.map((purchase) => {
+        let promises = null;
+        if(purchase && purchase.articles && purchase.articles.length > 0) {
+          Article.upsertArticle(purchase.articles, function (result) {
+              promises = result;
+          });
+        }
+
+        return {
+          promises,
+          purchaseDate: purchase.purchaseDate
+        }
+      });
+    }
+
+    let result = [];
+
+    var allPromise = Promise.all(
+      allPurchases.map((purchase) => {
+          return Promise.all(purchase.promises);
+      })
+    );
+
+    allPromise.then(function (purchases) {
+      let resultingPurchases = purchases.map((purchase) => {
+        const resultingArticles = purchase.map((article) => {
+          article.extraInfo._id = article.result._id;
+          return article.extraInfo;
+        });
+
+        return {
+            articles: resultingArticles
+        };
+      });
+
+      Customer.doesCustomerExist(customer.firstName, customer.lastName, customer.email, function (err, response) {
+        if (err) return next(err);
+        customer.purchases = resultingPurchases;
+
+        if (response.result) {
+          //customer exists
+          Customer.findByIdAndUpdate({_id: response.item._id}, customer, function (err, updateResponse) {
+            if (err) return next(err);
+            res.json(updateResponse._id);
+          });
+        } else {
+          //customer doesn't exist
+          Customer.create(customer, function (err, createResponse) {
+            if (err) return next(err);
+            res.json(createResponse._id);
+          });
+        }
+      });
+    });
+});
+
+/* PUT /customer/:customerId/purchases */
+/*
+INPUT: One purchase
+OUTPUT:
+*/
+router.put('/:customerId/purchases', function (req, res, next) {
+  //TODO
+  const bodyPurchase = req.body;
+
+  Customer.findById(req.params.customerId, function (err, customer) {
+    const dbPurchases = customer.purchases;
+    const dbPurchase = dbPurchases.find((purchase) => {return purchase.purchaseDate === bodyPurchase.purchaseDate;});
+
+    if (typeof dbPurchase !== "undefined") {
+      //purchase exists
+      //upsert the articles;
+    } else {
+      //purchase doesn't exist
+      //upsert the articles;
+    }
+  });
+});
+
+
+
+
+  //get all the purchases that have an id
+  //initialize an "resultingPurchases" array
+  //loop over the purchases
+    //check if their purchaseDate is updated
+      //If so: update the purchaseDate
+    //Get all the articles from the dbpurchase
+    //make a copy of the articles and store them in the array "oldArticles";
+    //loop over the new articles
+      //do a find function on the oldArticles to check if their are articles who have the same primary keys (name, ref)
+        //if an article was found
+          //check if the other properties aren't changed from the original
+            //add the article to the list "updateArticle"; and delete them from the newArticles array and oldArticles array
+          //check if the extrainfo properties aren't changed from the original
+            //add the article to the list "updateExtraInfo"; and delete them from the newArticles array and oldArticles array
+          //if the normal properties and the extra properties changed
+            //add them to the list "updateAll"; and delete them from the newArticles array and oldArticles array
+          //if all the properties are the same
+            //Remove the articles that are known from the db from the array so that only the new articles are left on the array; and delete them from the newArticles array and oldArticles array
+        //if the article wasn't found
+          //if there are articles left on the newArticles array, add them to the list "newArticles";
+     //if an there are oldArticles still in the array, add them to the "deleteArticleFromPurchase";
+
+    //Result of the article loop are lists of new(newArticles)/updated(updateArticle, updateExtraInfo)/deleted(deleteArticleFromPurchase)/all(updateAll) articles. The articles have the extraInfo and normal properties.
+    //declare a variable "resultingArticles"
+    //loop over the "newArticles" array
+      //do a Article.create and retreive the ObjectId
+      //add the ObjectId with the extraInfo properties to an object and add the object to the "resultingArticles" array;
+    //loop over the "updateArticle" array
+      //do a Article.findByIdAndUpdate, pass the normal properties (not the extra ones) and retreive the ObjectId
+      //add the ObjectId with the extraInfo properties to an object and add the object to the "resultingArticles" array;
+    //loop over the "updateExtraInfo" array
+      //Get the article.ObjectId from the article (is in object, no call needed) and get the extraInfo objects, put them in an object and store the object in the "resultingArticles" array
+    //loop over the "updateAll" array
+      //do a Article.findByIdAndUpdate, pass the normal properties (not the extra ones) and retreive the ObjectId;
+      //Put the ObjectId, with the extraInfo properties, put them in an object and store the object in the "resultingArticles" array;
+    //loop over the "deleteArticleFromPurchase" array
+      //Do nothing, if you don't add the articles to the "resultingArticles" array they won't be saved onto the updated customer;
+
+    //put the resultingArticles in the articles property of the purchase object;
+    //push the updatedPurchase to the resultingPurchases array
+  //end loop purchases
+
+  //add the resultingPurchases to the purchases property of the customer
+  //perform the customer.findByIdAndUpdate and pass the updated customer object;
+});
+
+/* DELETE /customer/:customerId/purchases */
+router.delete('/:customerId/purchases', function (req, res, next) {
+  //TODO
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const getPurchases = function (purchases, callback) {
   let allArticles = purchases.map((purchase) => {
