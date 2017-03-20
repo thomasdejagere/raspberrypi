@@ -1,23 +1,21 @@
-var express = require('express');
-var router = express.Router();
 var mongoose = require('mongoose');
 var User = require('../models/User.js');
 
 
 /* GET /users listing. */
-router.get('/', function(req, res, next) {
+function getUsers(req, res) {
   User.find(function (err, users) {
-    if (err) return next(err);
+    if (err) return res.send(err);
     res.json(users);
   });
-});
+}
 
 /* POST /users listing. */
-router.post('/', function(req, res, next) {
+function postUser(req, res) {
   User.create(req.body, function (err, user) {
-    if (err) return next(err);
+    if (err) return res.send(err);
     res.json(user);
   });
-});
+}
 
-module.exports = router;
+module.exports = {getUsers, postUser};

@@ -1,16 +1,13 @@
-var express = require('express');
-var router = express.Router();
 var User = require('../models/User.js');
 var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 var config = require('../config');
 var mongoose = require('mongoose');
-var auth = require('../middlewares/auth');
 
-router.post('/', function (req, res, next) {
+function authenticate (req, res) {
   User.findOne({
     name: req.body.name
   }, function (err, user) {
-    if (err) return next(err);
+    if (err) return res.send(err);
 
     if (!user) {
       //user doesn't exist
@@ -35,6 +32,6 @@ router.post('/', function (req, res, next) {
       }
     }
   });
-});
+}
 
-module.exports = router;
+module.exports = {authenticate};

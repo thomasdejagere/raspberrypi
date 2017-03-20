@@ -5,21 +5,19 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
-//var morgan      = require('morgan');
 var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 var config = require('./config');
+
+let articles = require('./routes/articles');
+let authenticator = require('./routes/authenticate');
+let users = require('./routes/users');
+let customers = require('./routes/customers');
 
 mongoose.Promise = global.Promise;
 
 mongoose.connect('mongodb://localhost/crm-pwnc')
 	.then(() => console.log('connection to mongodb is succesful'))
 	.catch((err) => console.log(err));
-
-
-
-var index = require('./routes/index');
-var user = require('./routes/users');
-var authenticate = require('./routes/authenticate');
 
 var app = express();
 
@@ -36,7 +34,34 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(require('./routes'));
+app.get("/", (req, res) => res.json({message: "Welcome to our PWNC CRM system!"}));
+
+app.route('/articles')
+	.get(articles.getArticles)
+	.post(articles.postArticle);
+app.route('/articles/:articleId')
+	.put(articles.updateArticle)
+	.delete(articles.deleteArticle);
+
+app.route('/customers')
+	.get(customers.getCustomers)
+	.post(customers.postCustomer);
+app.route('/customers/:customerId')
+	.get(customers.getCustomer)
+	.put(customers.updateCustomer)
+	.delete(customers.deleteCustomer);
+app.route('/customers/:customerId/purchases')
+	.get(customers.getPurchases)
+	.put(customers.updatePurchase)
+	.delete(customers.deletePurchase);
+
+app.route('/autenticate')
+	.post(authenticator.authenticate);
+
+app.route('/users')
+	.get(users.getUsers)
+	.post(users.postUser);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
