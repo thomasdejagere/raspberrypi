@@ -12,34 +12,32 @@ function getArticles(req, res) {
 
 /* POST /articles listing. */
 function postArticle(req, res) {
-  Article.create(req.body, function (err, article) {
-    if (err) return res.send(err);
-    res.json(article);
-  });
+  Article.upsertArticle(req.body)
+    .then((result) => {
+      Promise.all(result)
+        .then((result2) => {
+          res.json(result2);
+        })
+    })
+
 }
 
 /* PUT /articles/:articleId listing. */
 function updateArticle(req, res) {
-  Article.findById(req.params.articleId, function (err, article) {
-    if (err) return res.send(err);
-
-    article.name = req.body.name;
-    article.description = req.body.description;
-    article.price = req.body.price;
-    article.ref = req.body.ref;
-
-    article.save (function (err) {
-      if (err) return next(err);
-      res.json({message: 'The article is successfully updated!'});
-    });
-  });
+  Article.upsertArticle(req.body)
+    .then((result) => {
+      Promise.all(result)
+        .then((result2) => {
+          res.json(result2);
+        })
+    })
 }
 
 /* DELETE /articles/:articleId listing. */
 function deleteArticle(req, res) {
-  Article.findByIdAndRemove(req.params.articleId, function (err, article) {
+  Article.remove({_id: req.params.id}, (err, result) => {
     if (err) return res.send(err);
-    res.json({message: 'The article is successfully deleted!'});
+    res.json({message: 'Article successfully deleted!', result});
   });
 }
 

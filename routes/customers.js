@@ -84,6 +84,8 @@ function postCustomer(req, res) {
   allPromise.then(function (purchases) {
     let resultingPurchases = purchases.map((purchase) => {
       const resultingArticles = purchase.map((article) => {
+        console.log("article");
+        console.log(article);
         article.extraInfo._id = article.result._id;
         return article.extraInfo;
       });
